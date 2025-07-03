@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Редактировать персонажа {% if character %}{{ character.first_name }}{% else %}Новый{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>
+    Редактировать персонажа {% if character %}{{ character.first_name }} {{ character.last_name }}{% else %}Новый{% endif %}
+  </h1>
+
+  <form method="POST" action="">
+    <!-- Поля персонажа, как у тебя -->
+    <div class="mb-3">
+      <label for="first_name" class="form-label">Имя</label>
+      <input type="text" class="form-control" id="first_name" name="first_name" required
+             value="{{ character.first_name if character else '' }}">
+    </div>
+    <div class="mb-3">
+      <label for="last_name" class="form-label">Фамилия</label>
+      <input type="text" class="form-control" id="last_name" name="last_name" required
+             value="{{ character.last_name if character else '' }}">
+    </div>
+    <!-- остальные поля -->
+
+    <button type="submit" class="btn btn-primary mb-4">Сохранить персонажа</button>
+  </form>
+
+  {% if character and character.id %}
+  <hr>
+
+  <div class="mb-3">
+    <label for="blockTypeSelect" class="form-label">Добавить блок</label>
+    <select id="blockTypeSelect" class="form-select" aria-label="Выберите тип блока">
+      <option selected disabled>Выберите тип блока</option>
+      <option value="inventory">Инвентарь</option>
+      <option value="notes">Заметки</option>
+      <option value="weapon">Оружие</option>
+      <option value="armor">Броня</option>
+      <option value="special_trait">Особая черта</option>
+    </select>
+    <button id="addBlockBtn" class="btn btn-primary mt-2">Добавить блок</button>
+  </div>
+
+  <ul id="blocksList" class="list-group">
+    {% for block in blocks %}
+      <li class="list-group-item d-flex justify-content-between align-items-center" data-block-id="{{ block.id }}">
+        <span><strong>{{ block.type }}</strong></span>
+        <div>
+          <button class="btn btn-sm btn-warning edit-block-btn me-2">Редактировать</button>
+          <button class="btn btn-sm btn-danger delete-block-btn">Удалить</button>
+        </div>
+      </li>
+    {% else %}
+      <li class="list-group-item">Блоки пока не добавлены</li>
+    {% endfor %}
+  </ul>
+
+  <script>
+  document.getElementById('addBlockBtn').addEventListener('click', function() {
+    const select = document.getElementById('blockTypeSelect');
+    const blockType = select.value;
+    if (!blockType) {
+      alert('Пожалуйста, выберите тип блока');
+      return;
+    }
+
+    fetch('{{ url_for("add_block_ajax", char_id=character.id) }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({block_type: blockType})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      const ul = document.getElementById('blocksList');
+      const emptyItem = ul.querySelector('li.list-group-item');
+      if (emptyItem && emptyItem.textContent.trim() === 'Блоки пока не добавлены') emptyItem.remove();
+
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.dataset.blockId = data.id;
+      li.innerHTML = `
+        <span><strong>${data.type}</strong></span>
+        <div>
+          <button class="btn btn-sm btn-warning edit-block-btn me-2">Редактировать</button>
+          <button class="btn btn-sm btn-danger delete-block-btn">Удалить</button>
+        </div>
+      `;
+      ul.appendChild(li);
+      select.value = '';
+    })
+    .catch(() => alert('Ошибка при добавлении блока'));
+  });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}
