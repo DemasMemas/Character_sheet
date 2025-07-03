@@ -6,42 +6,16 @@
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet" />
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-  <div class="bg-white p-8 rounded shadow-md w-full max-w-xl">
+  <div class="container mt-4 p-4 bg-white rounded shadow-sm" style="max-width: 800px;">
     <h1 class="text-2xl font-bold mb-6">Создать персонажа</h1>
     <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <!-- Личные данные -->
       <label class="block mb-2 font-semibold">Имя</label>
       <input type="text" name="first_name" required class="w-full p-2 mb-4 border rounded" />
 
       <label class="block mb-2 font-semibold">Фамилия</label>
       <input type="text" name="last_name" required class="w-full p-2 mb-4 border rounded" />
-
-      <label class="block mb-2 font-semibold">Возраст</label>
-      <input type="number" name="age" min="0" class="w-full p-2 mb-4 border rounded" />
-
-      <label class="block mb-2 font-semibold">Группировка</label>
-      <input type="text" name="faction" class="w-full p-2 mb-4 border rounded" />
-
-      <label class="inline-flex items-center mb-4">
-        <input type="checkbox" name="has_pda" class="form-checkbox" />
-        <span class="ml-2">Есть КПК</span>
-      </label>
-
-      <!-- Навыки и опыт -->
-      <label class="block mb-2 font-semibold">Навыки и опыт</label>
-      <textarea name="skills_experience" rows="3" class="w-full p-2 mb-4 border rounded"></textarea>
-
-      <!-- Состояние здоровья -->
-      <label class="block mb-2 font-semibold">Состояние здоровья</label>
-      <textarea name="health_status" rows="3" class="w-full p-2 mb-4 border rounded"></textarea>
-
-      <!-- Предыстория -->
-      <label class="block mb-2 font-semibold">Предыстория</label>
-      <textarea name="backstory" rows="4" class="w-full p-2 mb-4 border rounded"></textarea>
-
-      <!-- Переносимый вес -->
-      <label class="block mb-2 font-semibold">Переносимый вес (кг)</label>
-      <input type="number" step="0.1" name="carry_weight" class="w-full p-2 mb-6 border rounded" />
 
       <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 w-full">Создать персонажа</button>
     </form>

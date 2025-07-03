@@ -11,6 +11,7 @@
   </h1>
 
   <form method="POST" action="">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <!-- Поля персонажа, как у тебя -->
     <div class="mb-3">
       <label for="first_name" class="form-label">Имя</label>

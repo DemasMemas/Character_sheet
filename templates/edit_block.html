@@ -6,6 +6,7 @@
 <h1>Редактирование блока</h1>
 
 <form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <!-- Здесь поля формы для редактирования блока, например: -->
   <div class="mb-3">
     <label for="settings" class="form-label">Настройки блока (JSON)</label>

@@ -18,49 +18,15 @@
 <!-- Блоки персонажа -->
 <div class="container my-4 p-0">
   <h2>Блоки персонажа</h2>
-  <div id="blocks-container" class="list-group">
-    {% for block in character.blocks %}
-      <div class="list-group-item d-flex justify-content-between align-items-center block-item" data-id="{{ block.id }}">
-        <div>
-          <strong>{{ block.type|capitalize }}</strong><br>
-          {% if block.type == 'notes' %}
-            <small>{{ block.data.get('text', '')[:50] }}...</small>
-          {% elif block.type == 'inventory' %}
-            <small>Размер: {{ block.settings.get('width', '?') }}×{{ block.settings.get('height', '?') }}</small>
-          {% else %}
-            <small>Доп. информация отсутствует</small>
-          {% endif %}
-        </div>
-      </div>
-    {% endfor %}
-  </div>
+  {% include 'includes/_blocks.html' %}
 </div>
 
 <a href="{{ url_for('edit_character', char_id=character.id) }}" class="btn btn-warning">Редактировать</a>
 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Назад к списку</a>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-  const container = document.getElementById('blocks-container');
-  const sortable = new Sortable(container, {
-    animation: 150,
-    onEnd: function (evt) {
-      // Формируем массив с id блоков и новым порядком
-      const order = [];
-      container.querySelectorAll('.block-item').forEach((el, index) => {
-        order.push({id: el.dataset.id, order: index});
-      });
-
-      // Отправляем на сервер для сохранения
-      fetch('{{ url_for("update_blocks_order", char_id=character.id) }}', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(order),
-      })
-      .then(response => {
-        if (!response.ok) alert('Ошибка при сохранении порядка блоков');
-      });
-    },
+  document.querySelectorAll('.edit-block-btn, .delete-block-btn').forEach(btn => {
+    btn.style.display = 'none';
   });
 </script>
 {% endblock %}
