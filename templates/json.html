@@ -1,0 +1,4 @@
+<!-- templates/json.html -->
+{% macro tojson(obj) -%}
+    {{ obj|tojson|safe }}
+{%- endmacro %}

@@ -1,0 +1,162 @@
+{% from "json.html" import tojson %}
+<div class="block mb-3 border rounded" data-block-id="{{ block.id }}">
+    <div class="block-header bg-light p-2 d-flex justify-content-between align-items-center">
+        <div>
+            <span class="drag-handle">☰</span>
+            <span>{{ block.type }}{% if block.subtype %}: {{ block.subtype }}{% endif %}</span>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-warning edit-block-btn me-2">Редактировать</button>
+            <button class="btn btn-sm btn-danger delete-block">Удалить</button>
+        </div>
+    </div>
+
+    <!-- Блок для редактирования (скрыт по умолчанию) -->
+    <div class="block-edit-form p-3 bg-light border-top" style="display: none;">
+        {% if block.type == 'health' %}
+            <div class="mb-3">
+                <label class="form-label">Состояние</label>
+                <input type="text" class="form-control health-status" value="{{ block.data.status if block.data }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Радиация</label>
+                <input type="number" class="form-control health-radiation" value="{{ block.data.radiation if block.data }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Эффекты (через запятую)</label>
+                <input type="text" class="form-control health-effects" value="{{ block.data.effects|join(', ') if block.data and block.data.effects }}">
+            </div>
+        {% elif block.type == 'inventory' %}
+            <div class="mb-3">
+                <label class="form-label">Предметы (JSON)</label>
+                <textarea class="form-control inventory-items" rows="4">{% if block.data and block.data.items %}{{ tojson(block.data.items) }}{% else %}[]{% endif %}</textarea>
+                <small class="form-text text-muted">Формат: [{"name": "Аптечка", "quantity": 1, "weight": 0.5}]</small>
+            </div>
+        {% elif block.type == 'notes' %}
+            <div class="mb-3">
+                <label class="form-label">Текст заметки</label>
+                <textarea class="form-control notes-text" rows="4">{% if block.data and block.data.text %}{{ block.data.text }}{% endif %}</textarea>
+            </div>
+        {% elif block.type == 'weapon' %}
+            <div class="mb-3">
+                <label class="form-label">Название</label>
+                <input type="text" class="form-control weapon-name" value="{{ block.data.name if block.data }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Урон</label>
+                <input type="text" class="form-control weapon-damage" value="{{ block.data.damage if block.data }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Точность (%)</label>
+                <input type="number" class="form-control weapon-accuracy" value="{{ block.data.accuracy if block.data }}">
+            </div>
+        {% elif block.type == 'special_trait' %}
+            <div class="mb-3">
+                <label class="form-label">Название черты</label>
+                <input type="text" class="form-control trait-name" value="{{ block.data.name if block.data }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Описание</label>
+                <textarea class="form-control trait-description" rows="3">{% if block.data and block.data.description %}{{ block.data.description }}{% endif %}</textarea>
+            </div>
+        {% endif %}
+
+        <div class="d-flex justify-content-end">
+            <button class="btn btn-sm btn-success save-block-btn me-2">Сохранить</button>
+            <button class="btn btn-sm btn-secondary cancel-edit-btn">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Основное содержимое блока -->
+    <div class="block-content p-3">
+        {% if block.type == 'health' %}
+            <div class="health-block">
+                {% if block.data %}
+                    <p><strong>Состояние:</strong> {{ block.data.status or 'Норма' }}</p>
+                    <p><strong>Радиация:</strong> {{ block.data.radiation or 0 }}</p>
+                    <p><strong>Эффекты:</strong> {{ block.data.effects|join(', ') or 'Нет' }}</p>
+                {% else %}
+                    <p>Данные о здоровье не заполнены</p>
+                {% endif %}
+            </div>
+        {% elif block.type == 'inventory' %}
+            <div class="inventory-block">
+                {% if block.data and block.data.items %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Предмет</th>
+                                <th>Кол-во</th>
+                                <th>Вес</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in block.data.items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.weight }} кг</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>Инвентарь пуст</p>
+                {% endif %}
+            </div>
+        {% elif block.type == 'notes' %}
+            <div class="notes-block">
+                {% if block.data and block.data.text %}
+                    <p>{{ block.data.text | nl2br }}</p>
+                {% else %}
+                    <p>Заметок нет</p>
+                {% endif %}
+            </div>
+        {% elif block.type == 'weapon' %}
+            <div class="weapon-block">
+                {% if block.data %}
+                    <p><strong>Название:</strong> {{ block.data.name }}</p>
+                    <p><strong>Урон:</strong> {{ block.data.damage }}</p>
+                    <p><strong>Точность:</strong> {{ block.data.accuracy }}%</p>
+                {% else %}
+                    <p>Данные об оружии не заполнены</p>
+                {% endif %}
+            </div>
+        {% elif block.type == 'special_trait' %}
+            <div class="trait-block">
+                {% if block.data %}
+                    <p><strong>{{ block.data.name }}:</strong> {{ block.data.description }}</p>
+                {% else %}
+                    <p>Описание черты отсутствует</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>Тип блока не поддерживается</p>
+        {% endif %}
+    </div>
+
+    <!-- Кнопка для добавления дочернего блока -->
+    <div class="add-child-block p-2 bg-light border-top">
+        <div class="input-group">
+            <select class="form-select new-child-block-type">
+                <option value="health">Здоровье</option>
+                <option value="inventory">Инвентарь</option>
+                <option value="notes">Заметки</option>
+                <option value="weapon">Оружие</option>
+                <option value="armor">Броня</option>
+                <option value="special_trait">Особая черта</option>
+            </select>
+        <button class="btn btn-outline-primary add-child-block-btn" type="button">
+            Добавить дочерний блок
+        </button>
+        </div>
+    </div>
+
+    {% if block.children %}
+        <div class="child-blocks ps-4">
+            {% for child in block.children %}
+                {% include 'includes/_block.html' %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

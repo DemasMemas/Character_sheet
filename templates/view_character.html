@@ -18,15 +18,19 @@
 <!-- Блоки персонажа -->
 <div class="container my-4 p-0">
   <h2>Блоки персонажа</h2>
-  {% include 'includes/_blocks.html' %}
+  <div class="blocks-container">
+    {% for block in root_blocks %}
+        {% include 'includes/_block.html' %}
+    {% endfor %}
+  </div>
 </div>
 
 <a href="{{ url_for('edit_character', char_id=character.id) }}" class="btn btn-warning">Редактировать</a>
 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Назад к списку</a>
 
 <script>
-  document.querySelectorAll('.edit-block-btn, .delete-block-btn').forEach(btn => {
-    btn.style.display = 'none';
+  document.querySelectorAll('.delete-block, .drag-handle, .edit-block-btn').forEach(element => {
+    element.style.display = 'none';
   });
 </script>
 {% endblock %}

@@ -49,7 +49,532 @@
   </form>
 
   <hr>
-  {% include 'includes/_blocks.html' %}
-
+  <h2>Блоки персонажа</h2>
+  <div class="mb-3">
+      <label for="newBlockType" class="form-label">Добавить корневой блок</label>
+      <div class="input-group">
+          <select id="newBlockType" class="form-select">
+              <option value="health">Здоровье</option>
+              <option value="inventory">Инвентарь</option>
+              <option value="notes">Заметки</option>
+              <option value="weapon">Оружие</option>
+              <option value="armor">Броня</option>
+              <option value="special_trait">Особая черта</option>
+          </select>
+        <button id="addRootBlockBtn" class="btn btn-primary" type="button">
+            Добавить блок
+        </button>
+      </div>
+  </div>
+  <div class="blocks-container">
+    {% for block in root_blocks %}
+        {% include 'includes/_block.html' %}
+    {% endfor %}
+  </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("[DEBUG] edit_character scripts loaded");
+
+    // Добавление корневого блока
+    document.getElementById('addRootBlockBtn')?.addEventListener('click', function() {
+        const type = document.getElementById('newBlockType').value;
+        addNewBlock(null, type);
+    });
+
+    // Функция для сбора данных из формы редактирования
+        function collectBlockData(type, form) {
+            console.log(`Collecting data for ${type} block`);
+            const data = {};
+
+            switch(type) {
+                case 'health':
+                    data.status = form.querySelector('.health-status').value;
+                    data.radiation = parseFloat(form.querySelector('.health-radiation').value) || 0;
+                    data.effects = form.querySelector('.health-effects').value.split(',').map(e => e.trim()).filter(e => e);
+                    break;
+                case 'inventory':
+                    try {
+                        data.items = JSON.parse(form.querySelector('.inventory-items').value);
+                    } catch (e) {
+                        console.error("JSON parse error", e);
+                        alert('Ошибка формата JSON: ' + e.message);
+                        throw e;
+                    }
+                    break;
+                case 'notes':
+                    data.text = form.querySelector('.notes-text').value;
+                    break;
+                case 'weapon':
+                    data.name = form.querySelector('.weapon-name').value;
+                    data.damage = form.querySelector('.weapon-damage').value;
+                    data.accuracy = parseFloat(form.querySelector('.weapon-accuracy').value) || 0;
+                    break;
+                case 'armor':
+                    data.name = form.querySelector('.armor-name').value;
+                    data.defense = form.querySelector('.armor-defense').value;
+                    data.condition = form.querySelector('.armor-condition').value;
+                    break;
+                case 'special_trait':
+                    data.name = form.querySelector('.trait-name').value;
+                    data.description = form.querySelector('.trait-description').value;
+                    break;
+                default:
+                    console.warn(`Unknown block type: ${type}`);
+            }
+
+            return data;
+        }
+
+        // Функция для обновления содержимого блока после сохранения
+        function updateBlockContent(block, data) {
+            const content = block.querySelector('.block-content');
+            const type = block.dataset.blockType;
+
+            switch(type) {
+                case 'health':
+                    content.innerHTML = `
+                        <p><strong>Статус:</strong> ${data.status}</p>
+                        <p><strong>Радиация:</strong> ${data.radiation}</p>
+                        <p><strong>Эффекты:</strong> ${data.effects.join(', ')}</p>
+                    `;
+                    break;
+                case 'notes':
+                    content.innerHTML = `<p>${data.text}</p>`;
+                    break;
+                case 'weapon':
+                    content.innerHTML = `
+                        <p><strong>${data.name}</strong></p>
+                        <p>Урон: ${data.damage}</p>
+                        <p>Точность: ${data.accuracy}</p>
+                    `;
+                    break;
+                // Добавьте другие типы по аналогии
+                default:
+                    content.innerHTML = `<p>Данные блока обновлены</p>`;
+            }
+        }
+
+    // Делегирование событий
+    document.addEventListener('click', function(e) {
+        // Добавление дочернего блока
+        if (e.target.classList.contains('add-child-block-btn')) {
+            const block = e.target.closest('.block');
+            const parentId = block.dataset.blockId;
+            const typeSelect = block.querySelector('.new-child-block-type');
+            addNewBlock(parentId, typeSelect.value);
+        }
+
+        // Редактирование блока
+        if (e.target.classList.contains('edit-block-btn')) {
+            const block = e.target.closest('.block');
+            const form = block.querySelector('.block-edit-form');
+            const content = block.querySelector('.block-content');
+
+            // Заполняем форму текущими значениями
+            const blockType = block.dataset.blockType;
+            const contentElements = content.querySelectorAll('p, ul');
+            const blockData = {};
+
+            // Простая логика заполнения формы (для существующих блоков)
+            if (blockType === 'health') {
+                blockData.status = contentElements[0]?.textContent.split(':')[1]?.trim() || '';
+                blockData.radiation = parseFloat(contentElements[1]?.textContent.split(':')[1]?.trim()) || 0;
+                blockData.effects = contentElements[2]?.textContent.split(':')[1]?.trim()?.split(',') || [];
+            }
+
+            // Обновляем форму
+            form.innerHTML = `
+                ${generateEditForm(blockType, blockData)}
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-primary save-block-btn">Сохранить</button>
+                    <button type="button" class="btn btn-sm btn-secondary cancel-edit-btn">Отмена</button>
+                </div>
+            `;
+
+            form.style.display = 'block';
+            content.style.display = 'none';
+        }
+
+        // Отмена редактирования
+        if (e.target.classList.contains('cancel-edit-btn')) {
+            const block = e.target.closest('.block');
+            const form = block.querySelector('.block-edit-form');
+            const content = block.querySelector('.block-content');
+
+            form.style.display = 'none';
+            content.style.display = 'block';
+        }
+
+        // Сохранение блока
+        if (e.target.classList.contains('save-block-btn')) {
+            const form = e.target.closest('.block-edit-form');
+            const block = form.closest('.block');
+            const blockId = block.dataset.blockId;
+            const blockType = block.dataset.blockType;
+
+            if (!blockType) {
+                console.error("Block type is undefined!", block);
+                alert("Ошибка: тип блока не определен");
+                return;
+            }
+
+            try {
+                const data = collectBlockData(blockType, form);
+
+                fetch(`/block/${blockId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken
+                    },
+                    body: JSON.stringify({ data: data })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Обновляем содержимое блока
+                        const content = block.querySelector('.block-content');
+                        content.innerHTML = generateBlockContent(blockType, data);
+
+                        form.style.display = 'none';
+                        content.style.display = 'block';
+                    } else {
+                        alert('Ошибка сохранения: ' + (result.error || 'неизвестная ошибка'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка сети:', error);
+                    alert('Сетевая ошибка при сохранении блока');
+                });
+            } catch (error) {
+                console.error('Ошибка при сохранении блока:', error);
+                alert('Ошибка при обработке данных: ' + error.message);
+            }
+        }
+
+        // Удаление блока
+         if (e.target.classList.contains('delete-block')) {
+            if (!confirm('Удалить этот блок?')) return;
+
+            const block = e.target.closest('.block');
+            const blockId = block.dataset.blockId;
+
+            fetch(`/block/${blockId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    block.remove();
+                } else {
+                    alert('Ошибка удаления: ' + (result.error || 'неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка сети:', error);
+                alert('Сетевая ошибка при удалении блока');
+            });
+        }
+    });
+
+    // Инициализация перетаскивания
+    const container = document.querySelector('.blocks-container');
+    if (container && typeof Sortable !== 'undefined') {
+        new Sortable(container, {
+            animation: 150,
+            handle: '.drag-handle',
+            onEnd: function(evt) {
+                const blockId = evt.item.dataset.blockId;
+                const newParent = evt.to.closest('.block');
+                const newParentId = newParent ? newParent.dataset.blockId : null;
+
+                fetch(`/block/${blockId}/update_position`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.csrfToken
+                    },
+                    body: JSON.stringify({
+                        parent_id: newParentId,
+                        order: Array.from(evt.to.children).indexOf(evt.item)
+                    })
+                });
+            }
+        });
+    }
+
+    // Функция добавления нового блока
+    function addNewBlock(parentId, type) {
+        fetch("{{ url_for('add_block', char_id=character.id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrfToken
+            },
+            body: JSON.stringify({
+                parent_id: parentId,
+                type: type
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const newBlock = createBlockElement(data);
+            let container;
+
+            if (parentId) {
+                container = document.querySelector(`.block[data-block-id="${parentId}"] .child-blocks`);
+                if (!container) {
+                    const parentBlock = document.querySelector(`.block[data-block-id="${parentId}"]`);
+                    container = document.createElement('div');
+                    container.className = 'child-blocks ps-4';
+                    parentBlock.appendChild(container);
+                }
+            } else {
+                container = document.querySelector('.blocks-container');
+            }
+
+            container.appendChild(newBlock);
+        })
+        .catch(error => {
+            console.error('Ошибка при добавлении блока:', error);
+            alert('Ошибка при добавлении блока: ' + error.message);
+        });
+    }
+
+    // 6. Инициализация существующих блоков
+    function initializeExistingBlocks() {
+        document.querySelectorAll('.block').forEach(block => {
+            const blockId = block.dataset.blockId;
+            const blockType = block.dataset.blockType;
+
+            if (!block.querySelector('.block-edit-form')) {
+                // Создаем форму редактирования для существующих блоков
+                const formHtml = generateEditForm(blockType, {});
+                const formContainer = document.createElement('div');
+                formContainer.className = 'block-edit-form p-3 bg-light border-top';
+                formContainer.style.display = 'none';
+                formContainer.innerHTML = `
+                    ${formHtml}
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-primary save-block-btn">Сохранить</button>
+                        <button type="button" class="btn btn-sm btn-secondary cancel-edit-btn">Отмена</button>
+                    </div>
+                `;
+
+                // Вставляем форму после заголовка
+                const header = block.querySelector('.block-header');
+                header.insertAdjacentElement('afterend', formContainer);
+            }
+        });
+    }
+
+    initializeExistingBlocks();
+
+    // Функция создания элемента блока
+    function createBlockElement(blockData) {
+        const block = document.createElement('div');
+        block.className = 'block mb-3 border rounded';
+        block.dataset.blockId = blockData.id;
+        block.dataset.blockType = blockData.type;
+
+        // Используем данные блока для предзаполнения формы
+        const formHtml = generateEditForm(blockData.type, blockData.data || {});
+        const contentHtml = generateBlockContent(blockData.type, blockData.data || {});
+
+        block.innerHTML = `
+            <div class="block-header bg-light p-2 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="drag-handle">☰</span>
+                    <span>${blockData.type}</span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-warning edit-block-btn me-2">Редактировать</button>
+                    <button class="btn btn-sm btn-danger delete-block">Удалить</button>
+                </div>
+            </div>
+
+            <div class="block-edit-form p-3 bg-light border-top" style="display: none;">
+                ${formHtml}
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-primary save-block-btn">Сохранить</button>
+                    <button type="button" class="btn btn-sm btn-secondary cancel-edit-btn">Отмена</button>
+                </div>
+            </div>
+
+            <div class="block-content p-3">
+                ${contentHtml}
+            </div>
+
+            <div class="add-child-block p-2 bg-light border-top">
+                <div class="input-group">
+                    <select class="form-select new-child-block-type">
+                        <option value="health">Здоровье</option>
+                        <option value="inventory">Инвентарь</option>
+                        <option value="notes">Заметки</option>
+                        <option value="weapon">Оружие</option>
+                        <option value="armor">Броня</option>
+                        <option value="special_trait">Особая черта</option>
+                    </select>
+                    <button class="btn btn-outline-primary add-child-block-btn" type="button">
+                        Добавить дочерний блок
+                    </button>
+                </div>
+            </div>
+
+            <div class="child-blocks ps-4"></div>
+        `;
+
+        return block;
+    }
+
+// Функция для генерации содержимого блока
+    function generateBlockContent(type, data = {}) {
+        switch(type) {
+            case 'health':
+                return `
+                    <p><strong>Статус:</strong> ${data.status || 'Не указан'}</p>
+                    <p><strong>Радиация:</strong> ${data.radiation || 0}</p>
+                    <p><strong>Эффекты:</strong> ${data.effects ? data.effects.join(', ') : 'нет'}</p>
+                `;
+            case 'inventory':
+                // Безопасный вывод инвентаря
+                try {
+                    const items = data.items || [];
+                    return `
+                        <p><strong>Предметы (${items.length}):</strong></p>
+                        <ul>
+                            ${items.map(item => `<li>${item.name || 'Без названия'} x${item.quantity || 1}</li>`).join('')}
+                        </ul>
+                    `;
+                } catch (e) {
+                    return `<p>Ошибка отображения инвентаря</p>`;
+                }
+            case 'notes':
+                return `<p>${data.text || 'Нет заметки'}</p>`;
+            case 'weapon':
+                return `
+                    <p><strong>${data.name || 'Безымянное оружие'}</strong></p>
+                    <p>Урон: ${data.damage || 'не указан'}</p>
+                    <p>Точность: ${data.accuracy || 0}</p>
+                `;
+            case 'armor':
+                return `
+                    <p><strong>${data.name || 'Безымянная броня'}</strong></p>
+                    <p>Защита: ${data.defense || 'не указана'}</p>
+                    <p>Состояние: ${data.condition || 'не указано'}</p>
+                `;
+            case 'special_trait':
+                return `
+                    <p><strong>${data.name || 'Безымянная черта'}</strong></p>
+                    <p>${data.description || 'Описание отсутствует'}</p>
+                `;
+            default:
+                return `<p>Блок типа ${type}</p>`;
+        }
+    }
+
+    // 2. Функция генерации формы редактирования
+    function generateEditForm(type, data = {}) {
+        switch(type) {
+            case 'health':
+                return `
+                    <div class="mb-2">
+                        <label>Статус здоровья</label>
+                        <input type="text" class="form-control health-status"
+                               value="${data.status || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Радиация</label>
+                        <input type="number" step="0.1" class="form-control health-radiation"
+                               value="${data.radiation || 0}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Эффекты (через запятую)</label>
+                        <input type="text" class="form-control health-effects"
+                               value="${data.effects ? data.effects.join(', ') : ''}">
+                    </div>
+                `;
+            case 'inventory':
+                return `
+                    <div class="mb-2">
+                        <label>Предметы (в формате JSON)</label>
+                        <textarea class="form-control inventory-items" rows="4">${
+                            data.items ? JSON.stringify(data.items, null, 2) : '[]'
+                        }</textarea>
+                    </div>
+                `;
+            case 'notes':
+                return `
+                    <div class="mb-2">
+                        <label>Текст заметки</label>
+                        <textarea class="form-control notes-text" rows="4">${
+                            data.text || ''
+                        }</textarea>
+                    </div>
+                `;
+            case 'weapon':
+                return `
+                    <div class="mb-2">
+                        <label>Название оружия</label>
+                        <input type="text" class="form-control weapon-name"
+                               value="${data.name || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Урон</label>
+                        <input type="text" class="form-control weapon-damage"
+                               value="${data.damage || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Точность</label>
+                        <input type="number" step="0.1" class="form-control weapon-accuracy"
+                               value="${data.accuracy || 0}">
+                    </div>
+                `;
+            case 'armor':
+                return `
+                    <div class="mb-2">
+                        <label>Название брони</label>
+                        <input type="text" class="form-control armor-name"
+                               value="${data.name || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Защита</label>
+                        <input type="text" class="form-control armor-defense"
+                               value="${data.defense || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Состояние</label>
+                        <input type="text" class="form-control armor-condition"
+                               value="${data.condition || ''}">
+                    </div>
+                `;
+            case 'special_trait':
+                return `
+                    <div class="mb-2">
+                        <label>Название черты</label>
+                        <input type="text" class="form-control trait-name"
+                               value="${data.name || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label>Описание</label>
+                        <textarea class="form-control trait-description" rows="3">${
+                            data.description || ''
+                        }</textarea>
+                    </div>
+                `;
+            default:
+                return `<p>Форма редактирования для типа ${type}</p>`;
+        }
+    }
+});
+</script>
 {% endblock %}

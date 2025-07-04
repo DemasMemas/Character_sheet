@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 from typing import Optional, List, Union
 
 from dotenv import load_dotenv
@@ -36,6 +37,7 @@ Session(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
+# Модели
 class Character(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -55,7 +57,6 @@ class Character(db.Model):
     user = db.relationship('User', back_populates='characters')
     blocks = db.relationship('Block', back_populates='character', cascade="all, delete-orphan", order_by='Block.order')
 
-# Модели
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     password_hash = db.Column(db.String(128), nullable=False)
@@ -70,11 +71,15 @@ class User(db.Model):
 class Block(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     character_id = db.Column(db.Integer, db.ForeignKey('character.id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # например, 'inventory', 'notes'
+    parent_id = db.Column(db.Integer, db.ForeignKey('block.id'), nullable=True)  # Добавляем вложенность
+    type = db.Column(db.String(50), nullable=False)
+    subtype = db.Column(db.String(50), nullable=True)  # Для специализации блоков
     order = db.Column(db.Integer, nullable=False, default=0)
-    settings = db.Column(db.JSON, nullable=True)  # для хранения параметров блока
-    data = db.Column(db.JSON, nullable=True)  # данные блока, например, список предметов или текст заметок
+    settings = db.Column(db.JSON, nullable=True)
+    data = db.Column(db.JSON, nullable=True)
 
+    # Новые отношения
+    parent = db.relationship('Block', remote_side=[id], backref=db.backref('children'))
     character = db.relationship('Character', back_populates='blocks')
 
 @app.route("/")
@@ -92,7 +97,7 @@ def dashboard():
 
     return render_template('dashboard.html', characters=characters)
 
-@app.route("/character/create", methods=["POST"])
+@app.route("/character/create", methods=["GET", "POST"])
 def create_character():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -100,18 +105,14 @@ def create_character():
     if request.method == 'POST':
         user_id = session['user_id']
         try:
-            form_data = dict(request.form.lists())
-
-            processed_data = {}
-            for key, value in form_data.items():
-                processed_data[key] = value[0] if isinstance(value, list) and len(value) > 0 else value
-
-            data = CharacterSchema(**processed_data).model_dump()
+            # Упрощенная обработка без Pydantic
+            first_name = request.form['first_name']
+            last_name = request.form['last_name']
 
             character = Character(
                 user_id=user_id,
-                first_name=data['first_name'],
-                last_name=data['last_name'],
+                first_name=first_name,
+                last_name=last_name
             )
 
             db.session.add(character)
@@ -119,11 +120,12 @@ def create_character():
             flash('Персонаж создан')
             return redirect(url_for('edit_character', char_id=character.id))
 
-        except ValidationError as e:
-            flash(f"Ошибки валидации: {e.errors()}")
-            return redirect(url_for('create_character'))
-
-    return render_template('character_form.html', character=None)
+        except Exception as e:
+            flash(f"Ошибка создания персонажа: {str(e)}")
+            return render_template('create_character.html')
+    else:
+        # GET-запрос - показать форму
+        return render_template('create_character.html')
 
 class CharacterSchema(BaseModel):
     first_name: Union[str, List[str]]
@@ -168,18 +170,54 @@ def edit_character(char_id):
         flash('Персонаж обновлён')
         return redirect(url_for('edit_character', char_id=char_id))
 
-    blocks = Block.query.filter_by(character_id=char_id).order_by(Block.order).all()
+    all_blocks = Block.query.filter_by(character_id=char_id).all()
 
-    return render_template('edit_character.html', character=character, blocks=blocks)
+    # Группируем по родителям
+    blocks_by_parent = defaultdict(list)
+    for block in all_blocks:
+        blocks_by_parent[block.parent_id].append(block)
+
+    # Сортируем по порядку
+    for blocks in blocks_by_parent.values():
+        blocks.sort(key=lambda x: x.order)
+
+    # Строим дерево
+    def build_tree(parent_id=None):
+        return [{
+            **block.__dict__,
+            'children': build_tree(block.id)
+        } for block in blocks_by_parent.get(parent_id, [])]
+
+    root_blocks = build_tree()
+
+    return render_template('edit_character.html',
+                           character=character,
+                           root_blocks=root_blocks)
 
 @app.route("/character/<int:char_id>")
 def view_character(char_id):
     char = Character.query.get_or_404(char_id)
-    # Чтобы только владелец мог видеть, можно проверить:
     if "user_id" not in session or session["user_id"] != char.user_id:
         flash("Доступ запрещён.")
         return redirect(url_for("login"))
-    return render_template("view_character.html", character=char)
+
+    # Построение дерева блоков
+    all_blocks = Block.query.filter_by(character_id=char_id).all()
+    blocks_by_parent = defaultdict(list)
+    for block in all_blocks:
+        blocks_by_parent[block.parent_id].append(block)
+    for blocks in blocks_by_parent.values():
+        blocks.sort(key=lambda x: x.order)
+
+    def build_tree(parent_id=None):
+        return [{
+            **block.__dict__,
+            'children': build_tree(block.id)
+        } for block in blocks_by_parent.get(parent_id, [])]
+
+    root_blocks = build_tree()
+
+    return render_template("view_character.html", character=char, root_blocks=root_blocks)
 
 @app.route('/character/<int:char_id>/delete', methods=['POST'])
 def delete_character(char_id):
@@ -206,31 +244,76 @@ def delete_character(char_id):
 
     return redirect(url_for('dashboard'))
 
+@app.route('/character/<int:char_id>/add_block', methods=['POST'])
+def add_block(char_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        data = request.json
+        # ВЫВЕДИТЕ ДАННЫЕ ДЛЯ ОТЛАДКИ
+        app.logger.info(f"Add block data: {data}")
 
-@app.route('/character/<int:char_id>/add_block_ajax', methods=['POST'])
-def add_block_ajax(char_id):
-    character = Character.query.get_or_404(char_id)
-    if 'user_id' not in session or session['user_id'] != character.user_id:
-        return jsonify({'error': 'Доступ запрещён.'}), 403
+        # Определяем порядок для нового блока
+        if data.get('parent_id'):
+            # Для дочерних блоков
+            max_order = db.session.query(db.func.max(Block.order)).filter_by(
+                character_id=char_id,
+                parent_id=data['parent_id']
+            ).scalar() or 0
+        else:
+            # Для корневых блоков
+            max_order = db.session.query(db.func.max(Block.order)).filter_by(
+                character_id=char_id,
+                parent_id=None
+            ).scalar() or 0
 
-    block_type = request.json.get('block_type')
-    if not block_type:
-        return jsonify({'error': 'Тип блока не указан.'}), 400
+        new_block = Block(
+            character_id=char_id,
+            parent_id=data.get('parent_id'),
+            type=data['type'],
+            order=max_order + 1,
+            settings={},
+            data={}
+        )
 
-    # Определяем order как последний +1
-    max_order = db.session.query(db.func.max(Block.order)).filter_by(character_id=char_id).scalar() or 0
-    new_block = Block(character_id=char_id, type=block_type, order=max_order+1, settings={}, data={})
-    db.session.add(new_block)
+        db.session.add(new_block)
+        db.session.commit()
+
+        return jsonify({
+            'id': new_block.id,
+            'type': new_block.type,
+            'parent_id': new_block.parent_id
+        })
+    except Exception as e:
+        app.logger.error(f'Ошибка создания блока: {str(e)}')
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/block/<int:block_id>/update_position', methods=['POST'])
+def update_block_position(block_id):
+    block = Block.query.get_or_404(block_id)
+    data = request.json
+
+    block.parent_id = data.get('parent_id')
+    block.order = data.get('order', 0)
+
     db.session.commit()
+    return jsonify(success=True)
 
-    # Вернём данные нового блока для JS
-    return jsonify({
-        'id': new_block.id,
-        'type': new_block.type,
-        'order': new_block.order,
-        'settings': new_block.settings,
-        'data': new_block.data,
-    })
+@app.route('/block/<int:block_id>/update', methods=['POST'])
+def update_block(block_id):
+    block = Block.query.get_or_404(block_id)
+    data = request.json
+
+    # Обновляем только необходимые поля
+    if 'data' in data:
+        block.data = data['data']
+    if 'settings' in data:
+        block.settings = data['settings']
+    if 'subtype' in data:
+        block.subtype = data['subtype']
+
+    db.session.commit()
+    return jsonify(success=True)
 
 @app.route('/block/<int:block_id>/delete', methods=['POST'])
 def delete_block(block_id):
