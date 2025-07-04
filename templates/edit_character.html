@@ -382,6 +382,72 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 5. Функция для кнопок действий
     function initActionButtons(block) {
+        // Кнопка добавления строки в таблицу
+        const addRowBtn = block.querySelector('.add-row');
+        if (addRowBtn) {
+            addRowBtn.addEventListener('click', function() {
+              const tbody = block.querySelector('tbody');
+              const thead = block.querySelector('thead');
+
+              // Определяем количество столбцов:
+              // 1. Из первой строки tbody (если есть строки)
+              // 2. Из заголовков thead (если есть заголовки)
+              // 3. По умолчанию 1 столбец
+              let colCount = 1;
+
+              if (tbody.rows.length > 0) {
+                colCount = tbody.rows[0].cells.length;
+              } else if (thead && thead.rows.length > 0) {
+                colCount = thead.rows[0].cells.length;
+              }
+
+              const newRow = document.createElement('tr');
+
+              for (let i = 0; i < colCount; i++) {
+                const cell = document.createElement('td');
+                const field = document.createElement('div');
+                field.className = 'editable-field';
+                field.contentEditable = true;
+                field.dataset.field = `row_${tbody.rows.length}_col_${i}`;
+                cell.appendChild(field);
+                newRow.appendChild(cell);
+              }
+
+              tbody.appendChild(newRow);
+              saveBlock(block);
+            });
+          }
+
+        // Кнопка добавления столбца в таблицу
+        const addColBtn = block.querySelector('.add-column');
+        if (addColBtn) {
+          addColBtn.addEventListener('click', function() {
+            const colIndex = block.querySelectorAll('thead th').length;
+
+            // Добавляем заголовок
+            const newHeader = document.createElement('th');
+            const headerField = document.createElement('div');
+            headerField.className = 'editable-field';
+            headerField.contentEditable = true;
+            headerField.dataset.field = `header_${colIndex}`;
+            newHeader.appendChild(headerField);
+            block.querySelector('thead tr').appendChild(newHeader);
+
+            // Добавляем ячейки во все строки
+            block.querySelectorAll('tbody tr').forEach(row => {
+              const cell = document.createElement('td');
+              const field = document.createElement('div');
+              field.className = 'editable-field';
+              field.contentEditable = true;
+              field.dataset.field = `row_${row.rowIndex}_col_${colIndex}`;
+              cell.appendChild(field);
+              row.appendChild(cell);
+            });
+
+            saveBlock(block);
+          });
+        }
+
         // Кнопка удаления блока
         const deleteBtn = block.querySelector('.delete-block');
         if (deleteBtn) {
@@ -511,28 +577,71 @@ document.addEventListener('DOMContentLoaded', function() {
             blockElement.style.height = '200px';
             blockElement.style.backgroundColor = '#ffffff';
 
-            // Временное содержимое
-            blockElement.innerHTML = `
-                <div class="block-header">
+            if (type === 'table') {
+                blockElement.innerHTML = `
+                  <div class="block-header">
                     <div class="block-title editable-field" contenteditable="true" data-field="name">
-                        Новый блок (${type})
+                      Новая таблица
                     </div>
                     <div class="block-actions">
-                        <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
-                        <button class="btn btn-sm btn-danger delete-block">×</button>
+                      <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
+                      <button class="btn btn-sm btn-danger delete-block">×</button>
                     </div>
-                </div>
-                <div class="block-content">
-                    <div class="editable-field" contenteditable="true" data-field="content">
-                        Введите содержимое...
+                  </div>
+                  <div class="block-content">
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>
+                              <div class="editable-field" contenteditable="true" data-field="header_0">
+                                Новый столбец
+                              </div>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>
+                              <div class="editable-field" contenteditable="true" data-field="row_0_col_0">
+                                Новая строка
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <button class="btn btn-sm btn-outline-primary add-row">+ Добавить строку</button>
+                      <button class="btn btn-sm btn-outline-success add-column ms-2">+ Добавить колонку</button>
                     </div>
-                </div>
-                <div class="color-picker" style="display: none;">
-                    ${['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9']
-                        .map(color => `<div class="color-option" style="background-color: ${color};" data-color="${color}"></div>`)
-                        .join('')}
-                </div>
-            `;
+                  </div>
+                  <div class="color-picker" style="display: none;">
+                    <!-- цвета -->
+                  </div>
+                `;
+              } else {
+                // Временное содержимое
+                          blockElement.innerHTML = `
+                              <div class="block-header">
+                                  <div class="block-title editable-field" contenteditable="true" data-field="name">
+                                      Новый блок (${type})
+                                  </div>
+                                  <div class="block-actions">
+                                      <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
+                                      <button class="btn btn-sm btn-danger delete-block">×</button>
+                                  </div>
+                              </div>
+                              <div class="block-content">
+                                  <div class="editable-field" contenteditable="true" data-field="content">
+                                      Введите содержимое...
+                                  </div>
+                              </div>
+                              <div class="color-picker" style="display: none;">
+                                  ${['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9']
+                                      .map(color => `<div class="color-option" style="background-color: ${color};" data-color="${color}"></div>`)
+                                      .join('')}
+                              </div>
+                          `;
+              }
 
             board.appendChild(blockElement);
 
