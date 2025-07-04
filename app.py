@@ -314,6 +314,12 @@ def update_block(block_id):
     data = request.json
 
     # Просто сохраняем ВСЕ данные, которые пришли
+    if 'color' in data:
+        block.color = data['color']
+        if block.type == 'table':
+            if block.data is None:
+                block.data = {}
+            block.data['bg_color'] = data['color']
     if 'width' in data:
         block.width = data['width']
     if 'height' in data:

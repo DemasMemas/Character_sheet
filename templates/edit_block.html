@@ -166,52 +166,110 @@
         </span> кг
       </div>
 
-    {% elif block.type == 'table' %}
-    <div class="table-responsive">
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            {% for header in block.data.get('headers', ['Новый столбец']) %}
-              <th>
-                <div class="d-flex justify-content-between align-items-center">
-                  <div class="editable-field" contenteditable="true"
-                       data-field="header_{{ loop.index0 }}">{{ header }}</div>
-                  <button class="btn btn-sm btn-outline-danger delete-col-btn action-button"
-                          data-col-index="{{ loop.index0 }}">×</button>
-                </div>
-              </th>
-            {% endfor %}
-            <th class="align-middle">
-              <button class="btn btn-sm btn-outline-success add-column action-button">+</button>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in block.data.get('rows', [['Новая строка']]) %}
-            <tr class="table-row">
-              {% for cell in row %}
-                <td>
-                  <div class="editable-field" contenteditable="true"
-                       data-field="row_{{ loop.index0 }}_col_{{ loop.index0 }}">{{ cell }}</div>
-                </td>
-              {% endfor %}
-              <td class="align-middle text-center">
-                <button class="btn btn-sm btn-outline-danger delete-row-btn action-button"
-                        data-row-index="{{ loop.index0 }}">×</button>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
+      {% elif block.type == 'table' %}
+      {% set bg_color = block.data.get('bg_color', block.color) if block.data else block.color %}
+      <div class="table-container" style="background-color: {{ bg_color }}; border-radius: 8px; padding: 8px;">
+          <div class="table-responsive">
+              <table class="table table-sm" style="background-color: transparent;">
+                  <thead>
+                      <tr>
+                          {% for header in block.data.get('headers', ['Новый столбец']) %}
+                              <th style="background-color: {{ bg_color }};">
+                                  <div class="d-flex justify-content-between align-items-center">
+                                      <div class="editable-field" contenteditable="true"
+                                           data-field="header_{{ loop.index0 }}">{{ header }}</div>
+                                      <button class="btn btn-sm btn-outline-danger delete-col-btn action-button"
+                                              data-col-index="{{ loop.index0 }}">×</button>
+                                  </div>
+                              </th>
+                          {% endfor %}
+                          <th class="align-middle" style="background-color: {{ bg_color }};">
+                              <button class="btn btn-sm btn-outline-success add-column action-button">+</button>
+                          </th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for row in block.data.get('rows', [['Новая строка']]) %}
+                          <tr class="table-row">
+                              {% for cell in row %}
+                                  <td style="background-color: {{ bg_color }};">
+                                      <div class="editable-field" contenteditable="true"
+                                           data-field="row_{{ loop.index0 }}_col_{{ loop.index0 }}">{{ cell }}</div>
+                                  </td>
+                              {% endfor %}
+                              <td class="align-middle text-center" style="background-color: {{ bg_color }};">
+                                  <button class="btn btn-sm btn-outline-danger delete-row-btn action-button"
+                                          data-row-index="{{ loop.index0 }}">×</button>
+                              </td>
+                          </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+          <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
+      </div>
+      {% endif %}
+
+    <div class="color-picker">
+        <div class="color-option" data-color="#ffffff" title="Белый"></div>
+        <div class="color-option" data-color="#ffebee" title="Красный"></div>
+        <div class="color-option" data-color="#f3e5f5" title="Фиолетовый"></div>
+        <div class="color-option" data-color="#e8eaf6" title="Синий"></div>
+        <div class="color-option" data-color="#e3f2fd" title="Голубой"></div>
+        <div class="color-option" data-color="#e0f7fa" title="Бирюзовый"></div>
+        <div class="color-option" data-color="#e8f5e9" title="Зеленый"></div>
+        <div class="color-option" data-color="#fffde7" title="Желтый"></div>
+        <div class="color-option" data-color="#fff3e0" title="Оранжевый"></div>
+        <div class="color-option" data-color="#efebe9" title="Коричневый"></div>
+        <div class="color-option" data-color="#d3d3d3" title="Светло-серый"></div>
+        <div class="color-option" data-color="#a9a9a9" title="Темно-серый"></div>
     </div>
-    {% endif %}
   </div>
-
-  <div class="color-picker" style="display: none;">
-    {% for color in ['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9'] %}
-      <div class="color-option" style="background-color: {{ color }};" data-color="{{ color }}"></div>
-    {% endfor %}
-  </div>
-
 </div>
+<style>
+/* Обновленные стили для палитры */
+.color-picker {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    position: absolute;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    width: 180px; /* Немного шире */
+    border: 1px solid #dee2e6;
+}
+
+.color-option {
+    width: 28px;  /* Увеличим размер */
+    height: 28px; /* Увеличим размер */
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(0,0,0,0.1); /* Добавим границу */
+    transition: transform 0.2s, border-color 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Тень для лучшей видимости */
+    flex-shrink: 0;
+}
+
+.color-option:hover {
+    transform: scale(1.2);
+    border-color: #000;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+
+/* Яркие версии цветов для отображения в палитре */
+.color-option[data-color="#ffffff"] { background-color: #ffffff !important; }
+.color-option[data-color="#ffebee"] { background-color: #ff5252 !important; }
+.color-option[data-color="#f3e5f5"] { background-color: #e040fb !important; }
+.color-option[data-color="#e8eaf6"] { background-color: #536dfe !important; }
+.color-option[data-color="#e3f2fd"] { background-color: #40c4ff !important; }
+.color-option[data-color="#e0f7fa"] { background-color: #18ffff !important; }
+.color-option[data-color="#e8f5e9"] { background-color: #69f0ae !important; }
+.color-option[data-color="#fffde7"] { background-color: #ffff00 !important; }
+.color-option[data-color="#fff3e0"] { background-color: #ffab40 !important; }
+.color-option[data-color="#efebe9"] { background-color: #d7ccc8 !important; }
+.color-option[data-color="#d3d3d3"] { background-color: #808080 !important; }
+.color-option[data-color="#a9a9a9"] { background-color: #505050 !important; }
+</style>

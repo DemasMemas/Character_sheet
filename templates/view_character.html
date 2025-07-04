@@ -173,26 +173,29 @@
             </div>
 
           {% elif block.type == 'table' %}
-            <div class="table-responsive">
-              <table class="table table-sm">
-                <thead>
-                  <tr>
-                    {% for header in block.data.get('headers', []) %}
-                      <th>{{ header }}</th>
-                    {% endfor %}
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in block.data.get('rows', []) %}
-                    <tr>
-                      {% for cell in row %}
-                        <td>{{ cell }}</td>
-                      {% endfor %}
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+          {% set bg_color = block.data.get('bg_color', block.color) if block.data else block.color %}
+          <div class="table-container" style="background-color: {{ bg_color }}; border-radius: 8px; padding: 8px;">
+              <div class="table-responsive">
+                  <table class="table table-sm" style="background-color: transparent;">
+                      <thead>
+                          <tr>
+                              {% for header in block.data.get('headers', []) %}
+                                  <th style="background-color: {{ bg_color }};">{{ header }}</th>
+                              {% endfor %}
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for row in block.data.get('rows', []) %}
+                              <tr>
+                                  {% for cell in row %}
+                                      <td style="background-color: {{ bg_color }};">{{ cell }}</td>
+                                  {% endfor %}
+                              </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
 
           {% else %}
             <div class="custom-fields">

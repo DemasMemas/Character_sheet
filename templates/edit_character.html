@@ -176,6 +176,17 @@
       pointer-events: all;
       user-select: none;
     }
+
+    .table-container {
+        transition: background-color 0.3s ease;
+        overflow: hidden;
+    }
+
+    .table-wrapper {
+        background-color: inherit;
+        transition: background-color 0.3s ease;
+        overflow: hidden;
+    }
   </style>
 
   <!-- Доска для размещения блоков -->
@@ -281,6 +292,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 blockData.rows.push(rowData);
             });
+
+            // Сохраняем цвет фона
+            const tableContainer = block.querySelector('.table-container');
+            if (tableContainer) {
+                blockData.bg_color = tableContainer.style.backgroundColor;
+            }
         }
 
         // Формируем данные для отправки
@@ -339,10 +356,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             function stopDrag() {
+                if (!isDragging) return;
+
                 isDragging = false;
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', stopDrag);
-                saveBlock(block);
+
+                // Проверяем, существует ли блок
+                if (currentBlock) {
+                    saveBlock(currentBlock);
+                }
             }
         }
     }
@@ -400,6 +423,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 5. Функция для кнопок действий
     function initActionButtons(block) {
+        // Кнопка выбора цвета
+        const colorTrigger = block.querySelector('.color-trigger');
+        if (colorTrigger) {
+            const colorPicker = block.querySelector('.color-picker');
+
+            colorTrigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+
+                // Скрываем все другие палитры
+                document.querySelectorAll('.color-picker').forEach(picker => {
+                    if (picker !== colorPicker) picker.style.display = 'none';
+                });
+
+                // Позиционируем палитру над кнопкой с выравниванием по правому краю
+                const rect = colorTrigger.getBoundingClientRect();
+                const blockRect = block.getBoundingClientRect();
+
+                // Вычисляем положение относительно блока
+                const top = rect.top - blockRect.top;
+                const left = rect.left - blockRect.left;
+
+                colorPicker.style.position = 'absolute';
+                colorPicker.style.top = `${top - colorPicker.offsetHeight - 10}px`; // 10px отступ сверху
+                colorPicker.style.left = `${left - colorPicker.offsetWidth + rect.width}px`; // Выравнивание по правому краю
+                colorPicker.style.display = 'flex';
+
+                // Проверяем, не выходит ли палитра за пределы блока
+                const pickerRight = left + colorPicker.offsetWidth;
+                if (pickerRight > blockRect.width) {
+                    colorPicker.style.left = `${blockRect.width - colorPicker.offsetWidth}px`;
+                }
+            });
+
+            // Обработчики для элементов палитры
+            colorPicker.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const color = this.dataset.color;
+                    block.style.backgroundColor = color;
+
+                    const tableContainer = block.querySelector('.table-container');
+                    if (tableContainer) {
+                        tableContainer.style.backgroundColor = color;
+                    }
+
+                    block.querySelectorAll('th, td').forEach(cell => {
+                       cell.style.backgroundColor = color;
+                    });
+
+                    colorPicker.style.display = 'none';
+                    saveBlock(block); // Сохраняем изменения
+                });
+            });
+        }
+
         // Удаление строки
         block.querySelectorAll('.delete-row-btn').forEach(btn => {
           btn.addEventListener('click', function() {
@@ -707,56 +784,60 @@ document.addEventListener('DOMContentLoaded', function() {
             blockElement.style.height = '200px';
             blockElement.style.backgroundColor = '#ffffff';
 
-            if (type === 'table') {
-                blockElement.innerHTML = `
-                    <div class="block-header">
-                      <div class="block-title editable-field" contenteditable="true" data-field="name">
-                        Новая таблица
-                      </div>
-                      <div class="block-actions">
-                        <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
-                        <button class="btn btn-sm btn-danger delete-block">×</button>
-                      </div>
-                    </div>
-                    <div class="block-content">
-                      <div class="table-responsive">
-                        <table class="table table-sm">
-                          <thead>
-                            <tr>
-                              <th>
-                                <div class="d-flex justify-content-between align-items-center">
-                                  <div class="editable-field" contenteditable="true"
-                                       data-field="header_0">Новый столбец</div>
-                                  <button class="btn btn-sm btn-outline-danger delete-col-btn action-button"
-                                          data-col-index="0">×</button>
+                    if (type === 'table') {
+                        blockElement.innerHTML = `
+                            <div class="block-header">
+                                <div class="block-title editable-field" contenteditable="true" data-field="name">
+                                    Новая таблица
                                 </div>
-                              </th>
-                              <th class="align-middle">
-                                <button class="btn btn-sm btn-outline-success add-column action-button">+</button>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr class="table-row">
-                              <td>
-                                <div class="editable-field" contenteditable="true"
-                                     data-field="row_0_col_0">Новая строка</div>
-                              </td>
-                              <td class="align-middle text-center">
-                                <button class="btn btn-sm btn-outline-danger delete-row-btn action-button"
-                                        data-row-index="0">×</button>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
-                      </div>
-                    </div>
-                    <div class="color-picker" style="display: none;">
-                      <!-- цвета -->
-                    </div>
-                  `;
-            } else {
+                                <div class="block-actions">
+                                    <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
+                                    <button class="btn btn-sm btn-danger delete-block">×</button>
+                                </div>
+                            </div>
+                            <div class="block-content">
+                            <div class="table-container" style="background-color: #ffffff; border-radius: 8px; padding: 8px;">
+                                <div class="table-responsive">
+                                    <table class="table table-sm" style="background-color: transparent;">
+                                        <thead>
+                                            <tr>
+                                                <th style="background-color: #ffffff;">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="editable-field" contenteditable="true"
+                                                             data-field="header_0">Новый столбец</div>
+                                                        <button class="btn btn-sm btn-outline-danger delete-col-btn action-button"
+                                                                data-col-index="0">×</button>
+                                                    </div>
+                                                </th>
+                                                <th class="align-middle">
+                                                    <button class="btn btn-sm btn-outline-success add-column action-button">+</button>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="table-row">
+                                                <td style="background-color: #ffffff;">
+                                                    <div class="editable-field" contenteditable="true"
+                                                         data-field="row_0_col_0">Новая строка</div>
+                                                </td>
+                                                <td class="align-middle text-center" style="background-color: #ffffff;">
+                                                    <button class="btn btn-sm btn-outline-danger delete-row-btn action-button"
+                                                            data-row-index="0">×</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
+                            </div>
+                            <div class="color-picker" style="display: none;">
+                                  ${['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9', '#d3d3d3', '#a9a9a9']
+                                      .map(color => `<div class="color-option" style="background-color: ${color};" data-color="${color}"></div>`)
+                                      .join('')}
+                            </div>
+                        `;
+                    } else {
                 // Временное содержимое
                           blockElement.innerHTML = `
                               <div class="block-header">
@@ -774,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                   </div>
                               </div>
                               <div class="color-picker" style="display: none;">
-                                  ${['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9']
+                                  ${['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9', '#d3d3d3', '#a9a9a9']
                                       .map(color => `<div class="color-option" style="background-color: ${color};" data-color="${color}"></div>`)
                                       .join('')}
                               </div>
@@ -798,23 +879,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Сохраняем все блоки перед отправкой формы
         const blocks = document.querySelectorAll('.block');
-        let saveCount = 0;
 
         blocks.forEach(block => {
             saveBlock(block);
-            saveCount++;
         });
-
-        // Если нет блоков, сразу отправляем форму
-        if (saveCount === 0) {
-            form.submit();
-            return;
-        }
 
         // Ждем 1 секунду и отправляем форму
         setTimeout(() => {
             form.submit();
         }, 1000);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.color-picker') && !e.target.matches('.color-trigger')) {
+            document.querySelectorAll('.color-picker').forEach(picker => {
+                picker.style.display = 'none';
+            });
+        }
+    });
+
+    document.querySelectorAll('.block[data-block-type="table"]').forEach(block => {
+        const bgColor = block.style.backgroundColor;
+        const tableContainer = block.querySelector('.table-container');
+        if (tableContainer) {
+            tableContainer.style.backgroundColor = bgColor;
+        }
+
+        // Обновляем фон всех ячеек
+        block.querySelectorAll('th, td').forEach(cell => {
+            cell.style.backgroundColor = bgColor;
+        });
     });
 
     // 10. Инициализация при загрузке
