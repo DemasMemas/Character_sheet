@@ -167,52 +167,44 @@
       </div>
 
     {% elif block.type == 'table' %}
-      <div class="table-responsive">
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              {% for header in block.data.get('headers', ['Колонка 1', 'Колонка 2']) %}
-                <th>
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            {% for header in block.data.get('headers', ['Новый столбец']) %}
+              <th>
+                <div class="d-flex justify-content-between align-items-center">
                   <div class="editable-field" contenteditable="true"
-                       data-field="header_{{ loop.index0 }}">
-                    {{ header }}
-                  </div>
-                </th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in block.data.get('rows', [['', '']]) %}
-              <tr>
-                {% for cell in row %}
-                  <td>
-                    <div class="editable-field" contenteditable="true"
-                         data-field="row_{{ loop.index0 }}_col_{{ loop.index0 }}">
-                      {{ cell }}
-                    </div>
-                  </td>
-                {% endfor %}
-              </tr>
+                       data-field="header_{{ loop.index0 }}">{{ header }}</div>
+                  <button class="btn btn-sm btn-outline-danger delete-col-btn"
+                          data-col-index="{{ loop.index0 }}">×</button>
+                </div>
+              </th>
             {% endfor %}
-          </tbody>
-        </table>
-        <button class="btn btn-sm btn-outline-primary add-row">+ Добавить строку</button>
-        <button class="btn btn-sm btn-outline-success add-column ms-2">+ Добавить колонку</button>
-      </div>
-
-    {% else %}
-      <div class="custom-fields">
-        {% for key, value in block.data.items() %}
-          <div class="mb-2">
-            <label>{{ key }}:</label>
-            <span class="editable-field" contenteditable="true" data-field="{{ key }}">
-              {{ value }}
-            </span>
-          </div>
-        {% else %}
-          <p>Добавьте поля через редактирование</p>
-        {% endfor %}
-      </div>
+            <th>
+              <button class="btn btn-sm btn-outline-success add-column">+</button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in block.data.get('rows', [['Новая строка']]) %}
+            <tr>
+              {% for cell in row %}
+                <td>
+                  <div class="editable-field" contenteditable="true"
+                       data-field="row_{{ loop.index0 }}_col_{{ loop.index0 }}">{{ cell }}</div>
+                </td>
+              {% endfor %}
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-danger delete-row-btn"
+                        data-row-index="{{ loop.index0 }}">×</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
+    </div>
     {% endif %}
   </div>
 

@@ -382,66 +382,178 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 5. Функция для кнопок действий
     function initActionButtons(block) {
-        // Кнопка добавления строки в таблицу
+        // Удаление строки
+        block.querySelectorAll('.delete-row-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const rowIndex = parseInt(this.dataset.rowIndex);
+            const tbody = block.querySelector('tbody');
+
+            if (tbody.rows.length <= 1) {
+              if (!confirm('Вы уверены, что хотите удалить последнюю строку?')) return;
+            }
+
+            tbody.deleteRow(rowIndex);
+
+            // Обновляем индексы в оставшихся кнопках
+            tbody.querySelectorAll('.delete-row-btn').forEach((btn, i) => {
+              btn.dataset.rowIndex = i;
+            });
+
+            saveBlock(block);
+          });
+        });
+
+        // Удаление столбца
+        block.querySelectorAll('.delete-col-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const colIndex = parseInt(this.dataset.colIndex);
+            const thead = block.querySelector('thead');
+            const tbody = block.querySelector('tbody');
+
+            if (thead.rows[0].cells.length <= 2) { // 2 = столбец + кнопка добавления
+              if (!confirm('Вы уверены, что хотите удалить последний столбец?')) return;
+            }
+
+            // Удаляем столбец в заголовке
+            thead.rows[0].deleteCell(colIndex);
+
+            // Удаляем столбец во всех строках
+            tbody.querySelectorAll('tr').forEach(row => {
+              row.deleteCell(colIndex);
+            });
+
+            // Обновляем индексы в оставшихся кнопках
+            thead.querySelectorAll('.delete-col-btn').forEach((btn, i) => {
+              btn.dataset.colIndex = i;
+            });
+
+            saveBlock(block);
+          });
+        });
+
+        // Добавление строки (обновленная версия)
         const addRowBtn = block.querySelector('.add-row');
         if (addRowBtn) {
-            addRowBtn.addEventListener('click', function() {
-              const tbody = block.querySelector('tbody');
-              const thead = block.querySelector('thead');
+          addRowBtn.addEventListener('click', function() {
+            const tbody = block.querySelector('tbody');
+            const colCount = tbody.rows[0]?.cells?.length - 1 || 1; // Исключаем столбец с кнопкой
+            const rowIndex = tbody.rows.length;
 
-              // Определяем количество столбцов:
-              // 1. Из первой строки tbody (если есть строки)
-              // 2. Из заголовков thead (если есть заголовки)
-              // 3. По умолчанию 1 столбец
-              let colCount = 1;
+            const newRow = document.createElement('tr');
 
-              if (tbody.rows.length > 0) {
-                colCount = tbody.rows[0].cells.length;
-              } else if (thead && thead.rows.length > 0) {
-                colCount = thead.rows[0].cells.length;
-              }
-
-              const newRow = document.createElement('tr');
-
-              for (let i = 0; i < colCount; i++) {
-                const cell = document.createElement('td');
-                const field = document.createElement('div');
-                field.className = 'editable-field';
-                field.contentEditable = true;
-                field.dataset.field = `row_${tbody.rows.length}_col_${i}`;
-                cell.appendChild(field);
-                newRow.appendChild(cell);
-              }
-
-              tbody.appendChild(newRow);
-              saveBlock(block);
-            });
-          }
-
-        // Кнопка добавления столбца в таблицу
-        const addColBtn = block.querySelector('.add-column');
-        if (addColBtn) {
-          addColBtn.addEventListener('click', function() {
-            const colIndex = block.querySelectorAll('thead th').length;
-
-            // Добавляем заголовок
-            const newHeader = document.createElement('th');
-            const headerField = document.createElement('div');
-            headerField.className = 'editable-field';
-            headerField.contentEditable = true;
-            headerField.dataset.field = `header_${colIndex}`;
-            newHeader.appendChild(headerField);
-            block.querySelector('thead tr').appendChild(newHeader);
-
-            // Добавляем ячейки во все строки
-            block.querySelectorAll('tbody tr').forEach(row => {
+            // Добавляем ячейки с данными
+            for (let i = 0; i < colCount; i++) {
               const cell = document.createElement('td');
               const field = document.createElement('div');
               field.className = 'editable-field';
               field.contentEditable = true;
-              field.dataset.field = `row_${row.rowIndex}_col_${colIndex}`;
+              field.dataset.field = `row_${rowIndex}_col_${i}`;
+              field.textContent = 'Новая строка';
               cell.appendChild(field);
-              row.appendChild(cell);
+              newRow.appendChild(cell);
+            }
+
+            // Добавляем ячейку с кнопкой удаления
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-end';
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm btn-outline-danger delete-row-btn';
+            deleteBtn.dataset.rowIndex = rowIndex;
+            deleteBtn.textContent = '×';
+            actionCell.appendChild(deleteBtn);
+            newRow.appendChild(actionCell);
+
+            // Обработчик для новой кнопки
+            deleteBtn.addEventListener('click', function() {
+              tbody.deleteRow(rowIndex);
+
+              // Обновляем индексы
+              tbody.querySelectorAll('.delete-row-btn').forEach((btn, i) => {
+                btn.dataset.rowIndex = i;
+              });
+
+              saveBlock(block);
+            });
+
+            tbody.appendChild(newRow);
+            saveBlock(block);
+          });
+        }
+
+        // Добавление столбца (обновленная версия)
+        const addColBtn = block.querySelector('.add-column');
+        if (addColBtn) {
+          addColBtn.addEventListener('click', function() {
+            const thead = block.querySelector('thead');
+            const tbody = block.querySelector('tbody');
+            const colIndex = thead.rows[0].cells.length - 1; // Предпоследний столбец
+
+            // Добавляем заголовок
+            const newHeader = document.createElement('th');
+
+            const headerContent = document.createElement('div');
+            headerContent.className = 'd-flex justify-content-between align-items-center';
+
+            const headerField = document.createElement('div');
+            headerField.className = 'editable-field';
+            headerField.contentEditable = true;
+            headerField.dataset.field = `header_${colIndex}`;
+            headerField.textContent = 'Новый столбец';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm btn-outline-danger delete-col-btn';
+            deleteBtn.dataset.colIndex = colIndex;
+            deleteBtn.textContent = '×';
+
+            headerContent.appendChild(headerField);
+            headerContent.appendChild(deleteBtn);
+            newHeader.appendChild(headerContent);
+
+            // Вставляем перед кнопкой добавления
+            thead.rows[0].insertBefore(newHeader, thead.rows[0].lastElementChild);
+
+            // Добавляем обработчик для новой кнопки
+            deleteBtn.addEventListener('click', function() {
+              thead.rows[0].deleteCell(colIndex);
+
+              tbody.querySelectorAll('tr').forEach(row => {
+                row.deleteCell(colIndex);
+              });
+
+              saveBlock(block);
+            });
+
+            // Добавляем ячейки во все строки
+            tbody.querySelectorAll('tr').forEach((row, rowIndex) => {
+              const cell = document.createElement('td');
+
+              const cellContent = document.createElement('div');
+              cellContent.className = 'd-flex justify-content-between align-items-center';
+
+              const field = document.createElement('div');
+              field.className = 'editable-field';
+              field.contentEditable = true;
+              field.dataset.field = `row_${rowIndex}_col_${colIndex}`;
+              field.textContent = 'Новое значение';
+
+              cellContent.appendChild(field);
+
+              // Добавляем кнопку удаления только для первой ячейки в строке
+              if (colIndex === 0) {
+                const deleteRowBtn = document.createElement('button');
+                deleteRowBtn.className = 'btn btn-sm btn-outline-danger delete-row-btn';
+                deleteRowBtn.dataset.rowIndex = rowIndex;
+                deleteRowBtn.textContent = '×';
+                cellContent.appendChild(deleteRowBtn);
+
+                deleteRowBtn.addEventListener('click', function() {
+                  tbody.deleteRow(rowIndex);
+                  saveBlock(block);
+                });
+              }
+
+              cell.appendChild(cellContent);
+              row.insertBefore(cell, row.lastElementChild);
             });
 
             saveBlock(block);
@@ -579,46 +691,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (type === 'table') {
                 blockElement.innerHTML = `
-                  <div class="block-header">
-                    <div class="block-title editable-field" contenteditable="true" data-field="name">
-                      Новая таблица
+                    <div class="block-header">
+                      <div class="block-title editable-field" contenteditable="true" data-field="name">
+                        Новая таблица
+                      </div>
+                      <div class="block-actions">
+                        <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
+                        <button class="btn btn-sm btn-danger delete-block">×</button>
+                      </div>
                     </div>
-                    <div class="block-actions">
-                      <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
-                      <button class="btn btn-sm btn-danger delete-block">×</button>
+                    <div class="block-content">
+                      <div class="table-responsive">
+                        <table class="table table-sm">
+                          <thead>
+                            <tr>
+                              <th>
+                                <div class="d-flex justify-content-between align-items-center">
+                                  <div class="editable-field" contenteditable="true" data-field="header_0">
+                                    Новый столбец
+                                  </div>
+                                  <button class="btn btn-sm btn-outline-danger delete-col-btn" data-col-index="0">×</button>
+                                </div>
+                              </th>
+                              <th>
+                                <button class="btn btn-sm btn-outline-success add-column">+</button>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>
+                                <div class="editable-field" contenteditable="true"
+                                     data-field="row_0_col_0">Новая строка</div>
+                              </td>
+                              <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger delete-row-btn"
+                                        data-row-index="0">×</button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <button class="btn btn-sm btn-outline-primary add-row mt-2">+ Добавить строку</button>
+                      </div>
                     </div>
-                  </div>
-                  <div class="block-content">
-                    <div class="table-responsive">
-                      <table class="table table-sm">
-                        <thead>
-                          <tr>
-                            <th>
-                              <div class="editable-field" contenteditable="true" data-field="header_0">
-                                Новый столбец
-                              </div>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>
-                              <div class="editable-field" contenteditable="true" data-field="row_0_col_0">
-                                Новая строка
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <button class="btn btn-sm btn-outline-primary add-row">+ Добавить строку</button>
-                      <button class="btn btn-sm btn-outline-success add-column ms-2">+ Добавить колонку</button>
+                    <div class="color-picker" style="display: none;">
+                      <!-- цвета -->
                     </div>
-                  </div>
-                  <div class="color-picker" style="display: none;">
-                    <!-- цвета -->
-                  </div>
-                `;
-              } else {
+                  `;
+            } else {
                 // Временное содержимое
                           blockElement.innerHTML = `
                               <div class="block-header">
@@ -641,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                       .join('')}
                               </div>
                           `;
-              }
+            }
 
             board.appendChild(blockElement);
 
