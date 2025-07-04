@@ -18,6 +18,24 @@
 
   <!-- Стили для доски персонажа -->
   <style>
+    .action-button {
+      opacity: 0.3;
+      transition: opacity 0.2s ease;
+    }
+
+    th:hover .action-button,
+    .table-row:hover .action-button {
+      opacity: 1;
+    }
+
+    th {
+      vertical-align: middle !important;
+    }
+
+    td.align-middle {
+      vertical-align: middle !important;
+    }
+
     .character-board {
       position: relative;
       width: 100%;
@@ -707,25 +725,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             <tr>
                               <th>
                                 <div class="d-flex justify-content-between align-items-center">
-                                  <div class="editable-field" contenteditable="true" data-field="header_0">
-                                    Новый столбец
-                                  </div>
-                                  <button class="btn btn-sm btn-outline-danger delete-col-btn" data-col-index="0">×</button>
+                                  <div class="editable-field" contenteditable="true"
+                                       data-field="header_0">Новый столбец</div>
+                                  <button class="btn btn-sm btn-outline-danger delete-col-btn action-button"
+                                          data-col-index="0">×</button>
                                 </div>
                               </th>
-                              <th>
-                                <button class="btn btn-sm btn-outline-success add-column">+</button>
+                              <th class="align-middle">
+                                <button class="btn btn-sm btn-outline-success add-column action-button">+</button>
                               </th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr>
+                            <tr class="table-row">
                               <td>
                                 <div class="editable-field" contenteditable="true"
                                      data-field="row_0_col_0">Новая строка</div>
                               </td>
-                              <td class="text-end">
-                                <button class="btn btn-sm btn-outline-danger delete-row-btn"
+                              <td class="align-middle text-center">
+                                <button class="btn btn-sm btn-outline-danger delete-row-btn action-button"
                                         data-row-index="0">×</button>
                               </td>
                             </tr>
