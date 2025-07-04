@@ -3,34 +3,215 @@
 {% block title %}Просмотр персонажа {{ character.first_name }}{% endblock %}
 
 {% block content %}
-<h1>{{ character.first_name }} {{ character.last_name }}</h1>
+<div class="container mt-4">
+  <h1>{{ character.first_name }} {{ character.last_name }}</h1>
 
-<ul class="list-group mb-3">
-  <li class="list-group-item"><strong>Возраст:</strong> {{ character.age or '—' }}</li>
-  <li class="list-group-item"><strong>Группировка:</strong> {{ character.faction or '—' }}</li>
-  <li class="list-group-item"><strong>Есть КПК:</strong> {{ 'Да' if character.has_pda else 'Нет' }}</li>
-  <li class="list-group-item"><strong>Навыки и опыт:</strong><br>{{ character.skills_experience or '—' | nl2br }}</li>
-  <li class="list-group-item"><strong>Состояние здоровья:</strong><br>{{ character.health_status or '—' | nl2br }}</li>
-  <li class="list-group-item"><strong>Предыстория:</strong><br>{{ character.backstory or '—' | nl2br }}</li>
-  <li class="list-group-item"><strong>Переносимый вес:</strong> {{ character.carry_weight or '—' }} кг</li>
-</ul>
+  <style>
+    .character-board {
+      position: relative;
+      width: 100%;
+      height: 80vh;
+      min-height: 500px;
+      border: 2px dashed #ccc;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      overflow: auto;
+      margin-bottom: 20px;
+    }
 
-<!-- Блоки персонажа -->
-<div class="container my-4 p-0">
-  <h2>Блоки персонажа</h2>
-  <div class="blocks-container">
+    .block {
+      position: absolute;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      background-color: #ffffff;
+      min-width: 250px;
+      min-height: 150px;
+      z-index: 10;
+    }
+
+    .block-header {
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 10px;
+    }
+
+    .block-title {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .block-content {
+      overflow-y: auto;
+      max-height: calc(100% - 40px);
+    }
+  </style>
+
+  <div class="character-board" id="character-board">
     {% for block in root_blocks %}
-        {% include 'includes/_block.html' %}
+      <div class="block"
+           data-block-id="{{ block.id }}"
+           style="left: {{ block.position_x }}px;
+                  top: {{ block.position_y }}px;
+                  width: {{ block.width }}px;
+                  height: {{ block.height }}px;
+                  background-color: {{ block.color }};">
+
+        <div class="block-header">
+          <div class="block-title">
+            {% set block_names = {
+              'text': 'Текстовый блок',
+              'weapon': 'Оружие',
+              'armor': 'Броня',
+              'helmet': 'Шлем',
+              'inventory': 'Инвентарь',
+              'character_info': 'Информация о персонаже',
+              'table': 'Таблица'
+            } %}
+
+            {{ block.data.get('name', block_names.get(block.type, block.type)) }}
+          </div>
+        </div>
+
+        <div class="block-content">
+          {% if block.type == 'text' %}
+            <div>{{ block.data.get('content', '') }}</div>
+
+          {% elif block.type == 'weapon' %}
+            <div class="mb-2">
+              <label>Урон:</label>
+              <span>{{ block.data.get('damage', '—') }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Точность:</label>
+              <span>{{ block.data.get('accuracy', '—') }}</span>%
+            </div>
+            <div class="mb-2">
+              <label>Вес:</label>
+              <span>{{ block.data.get('weight', '—') }}</span> кг
+            </div>
+
+          {% elif block.type == 'armor' %}
+            <div class="mb-2">
+              <label>Защита:</label>
+              <span>{{ block.data.get('defense', '—') }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Прочность:</label>
+              <span>{{ block.data.get('durability', '—') }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Вес:</label>
+              <span>{{ block.data.get('armor_weight', '—') }}</span> кг
+            </div>
+
+          {% elif block.type == 'helmet' %}
+            <div class="mb-2">
+              <label>Защита головы:</label>
+              <span>{{ block.data.get('head_defense', '—') }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Штраф к обзору:</label>
+              <span>{{ block.data.get('vision_penalty', '—') }}</span>%
+            </div>
+            <div class="mb-2">
+              <label>Вес:</label>
+              <span>{{ block.data.get('helmet_weight', '—') }}</span> кг
+            </div>
+
+          {% elif block.type == 'inventory' %}
+            <div class="mb-2">
+              <label>Вместимость:</label>
+              <span>{{ block.data.get('capacity', '—') }}</span> кг
+            </div>
+            <div class="items-container mt-3">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Предмет</th>
+                    <th>Количество</th>
+                    <th>Вес</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in block.data.get('items', []) %}
+                    <tr>
+                      <td>{{ item.get('name', '—') }}</td>
+                      <td>{{ item.get('quantity', 1) }}</td>
+                      <td>{{ item.get('weight', 0) }} кг</td>
+                    </tr>
+                  {% else %}
+                    <tr>
+                      <td colspan="3">Инвентарь пуст</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% elif block.type == 'character_info' %}
+            <div class="mb-2">
+              <label>Имя:</label>
+              <span>{{ character.first_name }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Фамилия:</label>
+              <span>{{ character.last_name }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Возраст:</label>
+              <span>{{ character.age or '—' }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Группировка:</label>
+              <span>{{ character.faction or '—' }}</span>
+            </div>
+            <div class="mb-2">
+              <label>Переносимый вес:</label>
+              <span>{{ character.carry_weight or '—' }}</span> кг
+            </div>
+
+          {% elif block.type == 'table' %}
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    {% for header in block.data.get('headers', []) %}
+                      <th>{{ header }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in block.data.get('rows', []) %}
+                    <tr>
+                      {% for cell in row %}
+                        <td>{{ cell }}</td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          {% else %}
+            <div class="custom-fields">
+              {% for key, value in block.data.items() %}
+                <div class="mb-2">
+                  <label>{{ key }}:</label>
+                  <span>{{ value }}</span>
+                </div>
+              {% else %}
+                <p>Данные отсутствуют</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
     {% endfor %}
   </div>
+
+  <a href="{{ url_for('edit_character', char_id=character.id) }}" class="btn btn-warning">Редактировать</a>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Назад к списку</a>
 </div>
-
-<a href="{{ url_for('edit_character', char_id=character.id) }}" class="btn btn-warning">Редактировать</a>
-<a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Назад к списку</a>
-
-<script>
-  document.querySelectorAll('.delete-block, .drag-handle, .edit-block-btn').forEach(element => {
-    element.style.display = 'none';
-  });
-</script>
 {% endblock %}

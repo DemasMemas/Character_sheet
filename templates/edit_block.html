@@ -1,0 +1,225 @@
+<div class="block"
+     data-block-id="{{ block.id }}"
+     data-block-type="{{ block.type }}"
+     style="left: {{ block.position_x }}px;
+            top: {{ block.position_y }}px;
+            width: {{ block.width }}px;
+            height: {{ block.height }}px;
+            background-color: {{ block.color }};">
+
+  <div class="block-header">
+    {% if block.type == 'text' or block.type == 'weapon' or block.type == 'armor' or
+          block.type == 'inventory' or block.type == 'character_info' or
+          block.type == 'helmet' or block.type == 'table' %}
+      <div class="block-title editable-field" contenteditable="true" data-field="name">
+        {{ block.data.get('name', 'Новый блок') }}
+      </div>
+    {% else %}
+      <div class="block-title">{{ block.type }}</div>
+    {% endif %}
+
+    <div class="block-actions">
+      <button class="btn btn-sm btn-outline-secondary color-trigger">🎨</button>
+      <button class="btn btn-sm btn-danger delete-block">×</button>
+    </div>
+  </div>
+
+  <div class="block-content">
+    {% if block.type == 'text' %}
+      <div class="editable-field" contenteditable="true" data-field="content">
+        {{ block.data.get('content', 'Введите текст здесь...') }}
+      </div>
+
+    {% elif block.type == 'weapon' %}
+      <div class="mb-2">
+        <label>Урон:</label>
+        <span class="editable-field" contenteditable="true" data-field="damage">
+          {{ block.data.get('damage', '10') }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Точность:</label>
+        <span class="editable-field" contenteditable="true" data-field="accuracy">
+          {{ block.data.get('accuracy', '75') }}
+        </span>%
+      </div>
+      <div class="mb-2">
+        <label>Вес:</label>
+        <span class="editable-field" contenteditable="true" data-field="weight">
+          {{ block.data.get('weight', '3.5') }}
+        </span> кг
+      </div>
+      <div class="action-buttons mt-3">
+        <button class="btn btn-sm btn-primary action-btn" data-action="roll_attack">
+          Атаковать (D20)
+        </button>
+      </div>
+
+    {% elif block.type == 'armor' %}
+      <div class="mb-2">
+        <label>Защита:</label>
+        <span class="editable-field" contenteditable="true" data-field="defense">
+          {{ block.data.get('defense', '5') }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Прочность:</label>
+        <span class="editable-field" contenteditable="true" data-field="durability">
+          {{ block.data.get('durability', '100') }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Вес:</label>
+        <span class="editable-field" contenteditable="true" data-field="armor_weight">
+          {{ block.data.get('armor_weight', '8.5') }}
+        </span> кг
+      </div>
+
+    {% elif block.type == 'helmet' %}
+      <div class="mb-2">
+        <label>Защита головы:</label>
+        <span class="editable-field" contenteditable="true" data-field="head_defense">
+          {{ block.data.get('head_defense', '3') }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Штраф к обзору:</label>
+        <span class="editable-field" contenteditable="true" data-field="vision_penalty">
+          {{ block.data.get('vision_penalty', '10') }}
+        </span>%
+      </div>
+      <div class="mb-2">
+        <label>Вес:</label>
+        <span class="editable-field" contenteditable="true" data-field="helmet_weight">
+          {{ block.data.get('helmet_weight', '2.5') }}
+        </span> кг
+      </div>
+
+    {% elif block.type == 'inventory' %}
+      <div class="mb-2">
+        <label>Вместимость:</label>
+        <span class="editable-field" contenteditable="true" data-field="capacity">
+          {{ block.data.get('capacity', '50') }}
+        </span> кг
+      </div>
+      <div class="mt-3">
+        <button class="btn btn-sm btn-outline-success add-item-btn">+ Добавить предмет</button>
+      </div>
+      <div class="items-container mt-2">
+        {% for item in block.data.get('items', []) %}
+          <div class="item mb-2 p-2 border">
+            <div class="d-flex justify-content-between">
+              <div>
+                <span class="editable-field" contenteditable="true" data-field="items.{{ loop.index0 }}.name">
+                  {{ item.get('name', 'Предмет') }}
+                </span>
+              </div>
+              <button class="btn btn-sm btn-danger delete-item">×</button>
+            </div>
+            <div class="row mt-1">
+              <div class="col">
+                <label>Кол-во:</label>
+                <span class="editable-field" contenteditable="true" data-field="items.{{ loop.index0 }}.quantity">
+                  {{ item.get('quantity', 1) }}
+                </span>
+              </div>
+              <div class="col">
+                <label>Вес:</label>
+                <span class="editable-field" contenteditable="true" data-field="items.{{ loop.index0 }}.weight">
+                  {{ item.get('weight', 0.1) }}
+                </span> кг
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    {% elif block.type == 'character_info' %}
+      <div class="mb-2">
+        <label>Имя:</label>
+        <span class="editable-field" contenteditable="true" data-field="first_name">
+          {{ character.first_name }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Фамилия:</label>
+        <span class="editable-field" contenteditable="true" data-field="last_name">
+          {{ character.last_name }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Возраст:</label>
+        <span class="editable-field" contenteditable="true" data-field="age">
+          {{ character.age or '—' }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Группировка:</label>
+        <span class="editable-field" contenteditable="true" data-field="faction">
+          {{ character.faction or '—' }}
+        </span>
+      </div>
+      <div class="mb-2">
+        <label>Переносимый вес:</label>
+        <span class="editable-field" contenteditable="true" data-field="carry_weight">
+          {{ character.carry_weight or '—' }}
+        </span> кг
+      </div>
+
+    {% elif block.type == 'table' %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              {% for header in block.data.get('headers', ['Колонка 1', 'Колонка 2']) %}
+                <th>
+                  <div class="editable-field" contenteditable="true"
+                       data-field="header_{{ loop.index0 }}">
+                    {{ header }}
+                  </div>
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in block.data.get('rows', [['', '']]) %}
+              <tr>
+                {% for cell in row %}
+                  <td>
+                    <div class="editable-field" contenteditable="true"
+                         data-field="row_{{ loop.index0 }}_col_{{ loop.index0 }}">
+                      {{ cell }}
+                    </div>
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <button class="btn btn-sm btn-outline-primary add-row">+ Добавить строку</button>
+        <button class="btn btn-sm btn-outline-success add-column ms-2">+ Добавить колонку</button>
+      </div>
+
+    {% else %}
+      <div class="custom-fields">
+        {% for key, value in block.data.items() %}
+          <div class="mb-2">
+            <label>{{ key }}:</label>
+            <span class="editable-field" contenteditable="true" data-field="{{ key }}">
+              {{ value }}
+            </span>
+          </div>
+        {% else %}
+          <p>Добавьте поля через редактирование</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="color-picker" style="display: none;">
+    {% for color in ['#ffffff', '#ffebee', '#f3e5f5', '#e8eaf6', '#e3f2fd', '#e0f7fa', '#e8f5e9', '#fffde7', '#fff3e0', '#efebe9'] %}
+      <div class="color-option" style="background-color: {{ color }};" data-color="{{ color }}"></div>
+    {% endfor %}
+  </div>
+
+</div>
